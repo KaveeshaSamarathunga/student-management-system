@@ -92,7 +92,7 @@ const Intakes = () => {
             </h2>
             <button 
   onClick={() => navigate('/create-intake')}
-  className="bg-[#FFB800] text-[#1D1D47] px-4 py-2 rounded-lg text-xs font-bold hover:bg-[#E6A600]"
+  className="bg-[#FFB800] text-[#1D1D47] px-4 py-2 rounded-lg text-xs font-bold hover:bg-[#E6A600] cursor-pointer"
 >
   Create Intake
 </button>
@@ -133,7 +133,7 @@ const Intakes = () => {
                   <td className="px-6 py-4 text-right">
                     <button
                       onClick={() => navigate(`/intakes/${intake.id}/students`)}
-                      className="inline-flex items-center gap-2 rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs font-bold text-[#3F3D8F] hover:bg-indigo-100"
+                      className="inline-flex items-center gap-2 rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs font-bold text-[#3F3D8F] hover:bg-indigo-100 cursor-pointer"
                     >
                       <Users size={14} />
                       View Student List

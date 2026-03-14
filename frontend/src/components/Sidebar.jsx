@@ -13,6 +13,8 @@ const Sidebar = () => {
     } catch (err) {
       console.error('Failed to log logout event', err);
     } finally {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
       localStorage.removeItem('session_id');
       window.location.href = '/';

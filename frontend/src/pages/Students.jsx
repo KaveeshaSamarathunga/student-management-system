@@ -7,7 +7,19 @@ import { useNavigate } from 'react-router-dom';
 const Students = () => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
+
+  const filteredStudents = students.filter((student) => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return true;
+
+    return (
+      student.student_id?.toLowerCase().includes(query) ||
+      student.name?.toLowerCase().includes(query) ||
+      student.intake?.toLowerCase().includes(query)
+    );
+  });
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -32,7 +44,9 @@ const Students = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
-              placeholder="Search by Unique ID"
+              placeholder="Search by ID, name, or intake"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-white border border-gray-100 rounded-lg text-sm focus:outline-none shadow-sm"
             />
           </div>
@@ -61,35 +75,50 @@ const Students = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {students.map((student) => (
-                <tr key={student.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-8 py-5 text-sm font-bold text-[#3F3D8F]">{student.student_id}</td>
-                  <td className="px-8 py-5">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={`https://ui-avatars.com/api/?name=${student.name}&background=random`}
-                        className="w-8 h-8 rounded-full"
-                        alt="Avatar"
-                      />
-                      <span className="text-sm font-bold text-gray-700">{student.name}</span>
-                    </div>
+              {loading ? (
+                <tr>
+                  <td colSpan="4" className="px-8 py-10 text-center text-gray-400">
+                    Loading students...
                   </td>
-                  <td className="px-8 py-5 text-sm text-gray-500 font-medium">{student.intake}</td>
-                  <td className="px-8 py-5 text-right">
-                    <button
-                      onClick={() => navigate(`/students/${student.id}`)}
-                      className="text-xs font-bold text-[#3F3D8F] hover:underline"
-                    >
-                      View Profile &gt;
-                    </button>                  </td>
                 </tr>
-              ))}
+              ) : filteredStudents.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="px-8 py-10 text-center text-gray-400">
+                    No students match your search.
+                  </td>
+                </tr>
+              ) : (
+                filteredStudents.map((student) => (
+                  <tr key={student.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-8 py-5 text-sm font-bold text-[#3F3D8F]">{student.student_id}</td>
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={`https://ui-avatars.com/api/?name=${student.name}&background=random`}
+                          className="w-8 h-8 rounded-full"
+                          alt="Avatar"
+                        />
+                        <span className="text-sm font-bold text-gray-700">{student.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5 text-sm text-gray-500 font-medium">{student.intake}</td>
+                    <td className="px-8 py-5 text-right">
+                      <button
+                        onClick={() => navigate(`/students/${student.id}`)}
+                        className="text-xs font-bold text-[#3F3D8F] hover:underline cursor-pointer"
+                      >
+                        View Profile &gt;
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
 
           {/* Pagination Footer */}
           <div className="px-8 py-4 bg-white border-t border-gray-50 flex justify-between items-center text-[11px] font-bold text-gray-400">
-            <span>Showing 1 to {students.length} of {students.length} students</span>
+            <span>Showing 1 to {filteredStudents.length} of {students.length} students</span>
             <div className="flex gap-2">
               <button className="p-1 border border-gray-100 rounded bg-gray-50 text-gray-300"><ChevronLeft size={16} /></button>
               <button className="p-1 border border-gray-100 rounded hover:bg-gray-50 transition-all"><ChevronRight size={16} /></button>

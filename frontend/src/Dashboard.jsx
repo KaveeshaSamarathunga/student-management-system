@@ -14,7 +14,36 @@ const Dashboard = () => {
     const [stats, setStats] = useState({ total_students: 0, active_batches: 0, total_courses: 0 });
     const [logs, setLogs] = useState([]);
     const [recentStudents, setRecentStudents] = useState([]);
+    const [exporting, setExporting] = useState(false);
     const [loading, setLoading] = useState(true);
+
+    const handleExportData = async () => {
+        try {
+            setExporting(true);
+            const response = await api.get('/api/audit-logs/export', {
+                responseType: 'blob',
+            });
+
+            const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = blobUrl;
+
+            const disposition = response.headers['content-disposition'] || '';
+            const filenameMatch = disposition.match(/filename\*?=(?:UTF-8''|\")?([^\";]+)/i);
+            const filename = filenameMatch ? decodeURIComponent(filenameMatch[1]) : 'audit_logs.csv';
+
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+            console.error('Error exporting audit logs:', err);
+            alert('Failed to export data. Please try again.');
+        } finally {
+            setExporting(false);
+        }
+    };
 
     useEffect(() => {
         // If no user is found in localStorage, kick them back to Login
@@ -62,11 +91,7 @@ const Dashboard = () => {
                 <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
                     <h2 className="text-lg font-bold text-slate-800">Dashboard</h2>
                     <div className="flex items-center gap-4">
-                        <button className="p-2 text-gray-400 hover:bg-gray-100 rounded-full relative">
-                            <Bell size={20} />
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                        </button>
-                        <button className="bg-[#1E293B] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-black transition-all">
+                        <button className="bg-[#1E293B] text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-black transition-all cursor-pointer">
                             <Plus size={18} /> New Intake
                         </button>
                     </div>
@@ -80,22 +105,17 @@ const Dashboard = () => {
                         <StatCard
                             label="Total Students"
                             value={stats.total_students}
-                            change="+12% from last month"
                             icon={<Users className="text-indigo-600" />}
-                            trend="up"
                         />
                         <StatCard
                             label="Active Batches"
                             value={stats.active_batches}
-                            change="Currently in progress"
                             icon={<Clock className="text-blue-600" />}
                         />
                         <StatCard
                             label="Total Courses"
                             value={stats.total_courses}
-                            change="2 require updates"
                             icon={<BookOpen className="text-slate-600" />}
-                            warning
                         />
                     </div>
 
@@ -103,7 +123,7 @@ const Dashboard = () => {
                     <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                         <div className="p-6 border-b border-gray-50 flex justify-between items-center">
                             <h3 className="font-bold text-slate-800">Recent Audit Logs</h3>
-                            <button className="text-xs font-bold text-indigo-600 hover:underline">View All Logs</button>
+                            <button className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer" onClick={() => navigate('/logs')} >View All Logs</button>
                         </div>
                         <table className="w-full text-left text-sm">
                             <thead className="bg-[#1E293B] text-white uppercase text-[10px] tracking-widest">
@@ -144,7 +164,7 @@ const Dashboard = () => {
                                 <h3 className="font-bold text-slate-800">Recently Registered Students</h3>
                                 <button
                                     onClick={() => navigate('/students')}
-                                    className="text-xs font-bold text-indigo-600 hover:underline"
+                                    className="text-xs font-bold text-indigo-600 hover:underline cursor-pointer"
                                 >
                                     View All Students
                                 </button>
@@ -195,9 +215,9 @@ const Dashboard = () => {
                         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
                             <h3 className="font-bold text-slate-800 mb-4">Quick Actions</h3>
                             <div className="space-y-3">
-                                <ActionButton icon={<Plus size={18} />} label="Add Student" />
-                                <ActionButton icon={<FileText size={18} />} label="View Logs" />
-                                <ActionButton icon={<TrendingUp size={18} />} label="Export Data" />
+                                <ActionButton icon={<Plus size={18} />} label="Add Student" onClick={() => navigate('/register-student')} />
+                                <ActionButton icon={<FileText size={18} />} label="View Logs" onClick={() => navigate('/logs')} />
+                                <ActionButton icon={<TrendingUp size={18} />} label={exporting ? 'Exporting...' : 'Export Data'} onClick={handleExportData} disabled={exporting} />
                             </div>
                         </div>
                     </div>
@@ -246,8 +266,12 @@ const LogRow = ({ action, user, time, status }) => (
     </tr>
 );
 
-const ActionButton = ({ icon, label }) => (
-    <button className="w-full flex items-center justify-center gap-3 py-3 border-2 border-dashed border-gray-100 rounded-xl text-gray-500 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all font-bold text-sm">
+const ActionButton = ({ icon, label, onClick, disabled = false }) => (
+    <button
+        onClick={onClick}
+        disabled={disabled}
+        className="w-full flex items-center justify-center gap-3 py-3 border-2 border-dashed border-gray-100 rounded-xl text-gray-500 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all font-bold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+    >
         {icon} {label}
     </button>
 );

@@ -101,8 +101,8 @@ const Registration = () => {
 
           {/* Footer Actions */}
           <div className="flex justify-end items-center gap-6 pt-6 border-t border-gray-50">
-            <button type="button" onClick={() => navigate('/students')} className="text-sm font-bold text-gray-400 hover:text-gray-600">Cancel</button>
-            <button type="submit" className="bg-[#FFB800] hover:bg-[#E6A600] text-[#1D1D47] px-8 py-4 rounded-2xl font-bold flex items-center gap-3 transition-all shadow-lg shadow-amber-100">
+            <button type="button" onClick={() => navigate('/students')} className="text-sm font-bold text-gray-400 hover:text-gray-600 cursor-pointer">Cancel</button>
+            <button type="submit" className="bg-[#FFB800] hover:bg-[#E6A600] text-[#1D1D47] px-8 py-4 rounded-2xl font-bold flex items-center gap-3 transition-all shadow-lg shadow-amber-100 cursor-pointer">
               <UserPlus size={20} /> Register Student
             </button>
           </div>

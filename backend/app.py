@@ -1,11 +1,21 @@
 import csv
 import io
+import os
 import urllib.parse
 import uuid
 from datetime import datetime, timedelta
 
 from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
+from flask_jwt_extended import (
+    JWTManager,
+    create_access_token,
+    create_refresh_token,
+    get_jwt,
+    get_jwt_identity,
+    jwt_required,
+    verify_jwt_in_request,
+)
 from sqlalchemy import or_, text
 
 from models import AuditLog, Course, Intake, Student, db
@@ -20,9 +30,43 @@ CORS(app)
 # Database Config
 app.config['SQLALCHEMY_DATABASE_URI'] = f'postgresql://postgres:{password}@localhost:5432/sms_db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'dev-jwt-secret-change-me')
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=30)
+app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=7)
 
 # LINK THE DB TO THE APP
 db.init_app(app)
+jwt = JWTManager(app)
+
+PUBLIC_ENDPOINTS = {
+    '/',
+    '/login',
+    '/auth/refresh',
+}
+
+
+@app.before_request
+def require_authentication():
+    if request.method == 'OPTIONS':
+        return None
+
+    if request.path in PUBLIC_ENDPOINTS or request.path.startswith('/static/'):
+        return None
+
+    try:
+        verify_jwt_in_request()
+    except Exception:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    return None
+
+
+def get_jwt_context():
+    try:
+        verify_jwt_in_request(optional=True)
+        return get_jwt_identity(), get_jwt()
+    except Exception:
+        return None, {}
 
 
 def ensure_audit_log_columns():
@@ -93,11 +137,13 @@ def ensure_intake_course_assignments_table():
 
 
 def get_actor():
-    return request.headers.get("X-Admin-Name") or "System"
+    _, claims = get_jwt_context()
+    return claims.get('admin_name') or request.headers.get("X-Admin-Name") or "System"
 
 
 def get_session_id():
-    return request.headers.get("X-Session-Id")
+    _, claims = get_jwt_context()
+    return claims.get('sid') or request.headers.get("X-Session-Id")
 
 
 def create_audit_log(
@@ -261,6 +307,13 @@ def login():
     # Simple check for now
     if admin and check_password_hash(admin.password_hash, user_password):
         session_id = uuid.uuid4().hex
+        jwt_claims = {
+            "admin_name": admin.name,
+            "sid": session_id,
+            "role": "admin",
+        }
+        access_token = create_access_token(identity=str(admin.admin_id), additional_claims=jwt_claims)
+        refresh_token = create_refresh_token(identity=str(admin.admin_id), additional_claims=jwt_claims)
         create_audit_log(
             action="Admin Login",
             action_type="LOGIN",
@@ -275,7 +328,9 @@ def login():
             "message": "Login Successful",
             "admin_name": admin.name,
             "session_id": session_id,
-            "status": "authenticated" # We'll use this flag in React
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "status": "authenticated"
         }), 200
 
     create_audit_log(
@@ -289,6 +344,24 @@ def login():
     db.session.commit()
     
     return jsonify({"error": "Invalid email or password"}), 401
+
+
+@app.route('/auth/refresh', methods=['POST'])
+@jwt_required(refresh=True)
+def refresh_access_token():
+    identity = get_jwt_identity()
+    claims = get_jwt()
+
+    new_access_token = create_access_token(
+        identity=identity,
+        additional_claims={
+            "admin_name": claims.get("admin_name"),
+            "sid": claims.get("sid"),
+            "role": claims.get("role", "admin"),
+        },
+    )
+
+    return jsonify({"access_token": new_access_token}), 200
 
 
 @app.route('/logout', methods=['POST'])
@@ -357,15 +430,15 @@ def register_student():
 
 @app.route('/api/dashboard-stats', methods=['GET'])
 def get_dashboard_stats():
-    from models import Student, Intake
+    from models import Student, Intake, Course
     # 1. Count total students
     total_students = Student.query.count()
     
     # 2. Count active intakes/batches
     active_batches = Intake.query.count() # You can filter by status='Active' later
     
-    # 3. Static or dynamic course count
-    total_courses = 15 # Placeholder until you build the Course model
+    # 3. Count total courses from the database
+    total_courses = Course.query.count()
     
     return jsonify({
         "total_students": total_students,

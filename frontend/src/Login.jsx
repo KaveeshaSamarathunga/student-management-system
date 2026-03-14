@@ -13,6 +13,8 @@ const Login = () => {
     try {
       const response = await api.post('/login', { email, password });
       if (response.data.status === 'authenticated') {
+        localStorage.setItem('access_token', response.data.access_token);
+        localStorage.setItem('refresh_token', response.data.refresh_token);
         localStorage.setItem('user', response.data.admin_name);
         localStorage.setItem('session_id', response.data.session_id);
         window.location.href = '/dashboard';
