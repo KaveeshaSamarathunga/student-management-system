@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../apiClient';
-import { Calendar, CheckSquare, Book } from 'lucide-react';
+import { Calendar, CheckSquare, Book, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Intakes = () => {
@@ -85,7 +85,7 @@ const Intakes = () => {
         <h1 className="text-3xl font-bold text-[#1D1D47] mb-8">Intake & Course Management</h1>
 
         {/* Active Intakes Card */}
-        <section className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden mb-8">
+        <section className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden mb-8">
           <div className="p-6 border-b border-gray-50 flex justify-between items-center">
             <h2 className="flex items-center gap-2 font-bold text-[#1D1D47]">
               <Calendar size={18} className="text-[#3F3D8F]" /> Active Academic Intakes
@@ -105,6 +105,7 @@ const Intakes = () => {
                 <th className="px-6 py-4">Start Date</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4">Capacity</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -129,6 +130,15 @@ const Intakes = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-gray-400 font-medium">{intake.enrolled} / {intake.capacity}</td>
+                  <td className="px-6 py-4 text-right">
+                    <button
+                      onClick={() => navigate(`/intakes/${intake.id}/students`)}
+                      className="inline-flex items-center gap-2 rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs font-bold text-[#3F3D8F] hover:bg-indigo-100"
+                    >
+                      <Users size={14} />
+                      View Student List
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -136,7 +146,7 @@ const Intakes = () => {
         </section>
 
         {/* Course Checklist Card */}
-        <section className="bg-white rounded-[24px] shadow-sm border border-gray-100 p-8">
+        <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
           <h2 className="flex items-center gap-2 font-bold text-[#1D1D47] mb-2">
             <CheckSquare size={18} className="text-[#3F3D8F]" /> Course Checklist
           </h2>

@@ -9,6 +9,7 @@ import CreateIntake from './pages/CreateIntake';
 import Courses from './pages/Courses';
 import Logs from './pages/Logs';
 import StudentProfile from './pages/StudentProfile';
+import IntakeStudents from './pages/IntakeStudents';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
         <Route path="/students" element={<MainLayout><Students /></MainLayout>} />
         <Route path="/register-student" element={<MainLayout><Registration></Registration></MainLayout>} />
         <Route path="/intakes" element={<MainLayout><Intakes /></MainLayout>} />
+        <Route path="/intakes/:id/students" element={<MainLayout><IntakeStudents /></MainLayout>} />
         <Route path="/create-intake" element={<MainLayout><CreateIntake /></MainLayout>} />
         <Route path="/courses" element={<MainLayout><Courses /></MainLayout>} />
         <Route path="/logs" element={<MainLayout><Logs /></MainLayout>} />

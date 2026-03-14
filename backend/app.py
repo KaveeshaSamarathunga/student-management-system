@@ -583,6 +583,42 @@ def get_intakes():
     return jsonify(output), 200
 
 
+@app.route('/api/intakes/<int:intake_id>/students', methods=['GET'])
+def get_intake_students(intake_id):
+    intake = Intake.query.get(intake_id)
+    if not intake:
+        return jsonify({"error": "Intake not found"}), 404
+
+    students_list = (
+        Student.query
+        .filter_by(intake_id=intake_id)
+        .order_by(Student.student_id.desc())
+        .all()
+    )
+
+    output = []
+    for student in students_list:
+        output.append({
+            "id": student.student_id,
+            "student_id": student.student_id,
+            "name": f"{student.first_name} {student.last_name}",
+            "email": student.email,
+            "mobile_number": student.mobile_number,
+            "intake_id": intake.intake_id,
+            "intake_name": intake.intake_name,
+        })
+
+    return jsonify({
+        "intake": {
+            "id": intake.intake_id,
+            "name": intake.intake_name,
+            "start_date": intake.start_date.strftime("%Y-%m-%d"),
+            "status": "Ongoing" if intake.is_active else "Inactive",
+        },
+        "students": output,
+    }), 200
+
+
 
 @app.route('/api/intakes', methods=['POST'])
 def create_intake():
