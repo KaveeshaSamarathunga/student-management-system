@@ -13,6 +13,7 @@ const Dashboard = () => {
     const adminName = localStorage.getItem('user');
     const [stats, setStats] = useState({ total_students: 0, active_batches: 0, total_courses: 0 });
     const [logs, setLogs] = useState([]);
+    const [recentStudents, setRecentStudents] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -23,17 +24,21 @@ const Dashboard = () => {
 
         const fetchData = async () => {
             try {
-                const statsRes = await api.get('/api/dashboard-stats');
-                const logsRes = await api.get('/api/audit-logs', {
-                    params: {
-                        page: 1,
-                        page_size: 5,
-                        session_id: localStorage.getItem('session_id') || '',
-                    },
-                });
+                const [statsRes, logsRes, studentsRes] = await Promise.all([
+                    api.get('/api/dashboard-stats'),
+                    api.get('/api/audit-logs', {
+                        params: {
+                            page: 1,
+                            page_size: 5,
+                            session_id: localStorage.getItem('session_id') || '',
+                        },
+                    }),
+                    api.get('/api/students'),
+                ]);
 
                 setStats(statsRes.data);
                 setLogs(logsRes.data.items || []);
+                setRecentStudents((studentsRes.data || []).slice(0, 6));
                 setLoading(false);
             } catch (err) {
                 console.error("Error fetching dashboard data", err);
@@ -133,14 +138,57 @@ const Dashboard = () => {
 
                     {/* Bottom Grid */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Chart Placeholder */}
+                        {/* Recently Registered Students */}
                         <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                            <h3 className="font-bold text-slate-800 mb-4">Course Enrollment Trends</h3>
-                            <div className="h-64 bg-slate-50 rounded-xl flex items-end justify-between px-8 py-4">
-                                {[40, 70, 60, 90, 80, 45, 55].map((h, i) => (
-                                    <div key={i} className="w-12 bg-indigo-200 rounded-t-lg hover:bg-indigo-500 transition-all cursor-pointer" style={{ height: `${h}%` }}></div>
-                                ))}
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-bold text-slate-800">Recently Registered Students</h3>
+                                <button
+                                    onClick={() => navigate('/students')}
+                                    className="text-xs font-bold text-indigo-600 hover:underline"
+                                >
+                                    View All Students
+                                </button>
                             </div>
+
+                            {loading ? (
+                                <div className="h-64 bg-slate-50 rounded-xl flex items-center justify-center text-sm text-gray-400 font-medium">
+                                    Loading students...
+                                </div>
+                            ) : recentStudents.length === 0 ? (
+                                <div className="h-64 bg-slate-50 rounded-xl flex items-center justify-center text-sm text-gray-400 font-medium">
+                                    No students found.
+                                </div>
+                            ) : (
+                                <div className="overflow-hidden rounded-xl border border-gray-100">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-slate-50 text-[10px] uppercase tracking-widest text-gray-400 font-bold">
+                                            <tr>
+                                                <th className="px-4 py-3">Student ID</th>
+                                                <th className="px-4 py-3">Name</th>
+                                                <th className="px-4 py-3">Intake</th>
+                                                <th className="px-4 py-3 text-right">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {recentStudents.map((student) => (
+                                                <tr key={student.id} className="hover:bg-gray-50/60 transition-colors">
+                                                    <td className="px-4 py-3 font-bold text-[#3F3D8F]">{student.student_id}</td>
+                                                    <td className="px-4 py-3 text-gray-700 font-medium">{student.name}</td>
+                                                    <td className="px-4 py-3 text-gray-500">{student.intake}</td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        <button
+                                                            onClick={() => navigate(`/students/${student.id}`)}
+                                                            className="text-xs font-bold text-[#3F3D8F] hover:underline"
+                                                        >
+                                                            View Profile &gt;
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
 
                         {/* Quick Actions */}
