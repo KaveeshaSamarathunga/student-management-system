@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+/* Import Poppins Font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* Basic reset to ensure full height and font application */
+:root {
+  font-family: 'Poppins', sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: #F8F9FB; /* Matches your design background */
+}
+
+#root {
+  width: 100%;
+}
