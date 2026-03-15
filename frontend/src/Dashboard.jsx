@@ -11,6 +11,7 @@ import api from './apiClient';
 const Dashboard = () => {
     const navigate = useNavigate();
     const adminName = localStorage.getItem('user');
+    const accessToken = localStorage.getItem('access_token');
     const [stats, setStats] = useState({ total_students: 0, active_batches: 0, total_courses: 0 });
     const [logs, setLogs] = useState([]);
     const [recentStudents, setRecentStudents] = useState([]);
@@ -47,8 +48,9 @@ const Dashboard = () => {
 
     useEffect(() => {
         // If no user is found in localStorage, kick them back to Login
-        if (!adminName) {
+        if (!adminName || !accessToken) {
             navigate('/');
+            return;
         }
 
         const fetchData = async () => {
@@ -77,9 +79,9 @@ const Dashboard = () => {
 
         
         fetchData();
-    }, [adminName, navigate]);
+    }, [adminName, accessToken, navigate]);
 
-    if (!adminName) return null; // Don't even render the page if not logged in
+    if (!adminName || !accessToken) return null; // Don't even render the page if not logged in
 
     return (
         <div className="flex h-screen bg-[#F3F4F6] font-poppins">

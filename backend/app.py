@@ -1,9 +1,9 @@
 import csv
 import io
 import os
-import urllib.parse
 import uuid
 from datetime import datetime, timedelta
+import time
 
 from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
@@ -18,17 +18,24 @@ from flask_jwt_extended import (
 )
 from sqlalchemy import or_, text
 
-from models import AuditLog, Course, Intake, Student, db
+from models import Admin, AuditLog, Course, Intake, Student, db
 from utils import generate_student_id
 from werkzeug.security import generate_password_hash, check_password_hash
 
-password = urllib.parse.quote_plus("Samarew@19")
-
 app = Flask(__name__)
-CORS(app)
+
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
+    if origin.strip()
+]
+CORS(app, origins=cors_origins)
 
 # Database Config
-app.config['SQLALCHEMY_DATABASE_URI'] = f'postgresql://postgres:{password}@localhost:5432/sms_db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
+    'DATABASE_URL',
+    'postgresql://postgres:postgres@localhost:5432/sms_db',
+)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'dev-jwt-secret-change-me')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=30)
@@ -67,6 +74,43 @@ def get_jwt_context():
         return get_jwt_identity(), get_jwt()
     except Exception:
         return None, {}
+
+
+def ensure_default_admin():
+    admin_email = os.getenv('DEFAULT_ADMIN_EMAIL', 'admin@sms.com')
+    admin_password = os.getenv('DEFAULT_ADMIN_PASSWORD', 'admin123')
+    admin_name = os.getenv('DEFAULT_ADMIN_NAME', 'System Administrator')
+
+    existing_admin = Admin.query.filter_by(email=admin_email).first()
+    if existing_admin:
+        return
+
+    new_admin = Admin(
+        name=admin_name,
+        email=admin_email,
+        password_hash=generate_password_hash(admin_password),
+    )
+    db.session.add(new_admin)
+    db.session.commit()
+    print(f"Default admin created: {admin_email}")
+
+
+def initialize_database(max_retries=20, delay_seconds=3):
+    for attempt in range(1, max_retries + 1):
+        try:
+            with app.app_context():
+                db.create_all()
+                ensure_audit_log_columns()
+                ensure_student_profile_columns()
+                ensure_intake_course_assignments_table()
+                ensure_default_admin()
+            print("Database initialization completed.")
+            return
+        except Exception as err:
+            if attempt == max_retries:
+                raise
+            print(f"Database init attempt {attempt}/{max_retries} failed: {err}")
+            time.sleep(delay_seconds)
 
 
 def ensure_audit_log_columns():
@@ -893,10 +937,8 @@ def delete_course(id):
 
 
 if __name__ == '__main__':
-    # Create tables automatically if they don't exist
-    with app.app_context():
-        db.create_all()
-        ensure_audit_log_columns()
-        ensure_student_profile_columns()
-        ensure_intake_course_assignments_table()
-    app.run(debug=True)
+    initialize_database()
+    app_host = os.getenv('APP_HOST', '0.0.0.0')
+    app_port = int(os.getenv('APP_PORT', '5000'))
+    app_debug = os.getenv('FLASK_DEBUG', '0') == '1'
+    app.run(host=app_host, port=app_port, debug=app_debug)

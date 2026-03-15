@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sms-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sms_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Samarew@19
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sms_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+    container_name: sms-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgresql://postgres:Samarew%4019@host.docker.internal:5432/sms_db"
+      JWT_SECRET_KEY: change-this-in-production
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+      APP_HOST: 0.0.0.0
+      APP_PORT: 5000
+      FLASK_DEBUG: 0
+      DEFAULT_ADMIN_EMAIL: admin@sms.com
+      DEFAULT_ADMIN_PASSWORD: admin123
+      DEFAULT_ADMIN_NAME: System Administrator
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:5000
+    container_name: sms-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  postgres_data:
