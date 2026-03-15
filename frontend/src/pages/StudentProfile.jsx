@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import api from '../apiClient';
-import { Mail, Phone, GraduationCap, Edit3, Save, X } from 'lucide-react';
+import { Mail, Phone, GraduationCap, Edit3, Save, X, Trash2 } from 'lucide-react';
 
 const StudentProfile = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [student, setStudent] = useState(null);
   const [formData, setFormData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState('');
 
@@ -103,6 +105,32 @@ const StudentProfile = () => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!student) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${student.name} (${student.student_id})? This action cannot be undone.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleting(true);
+    setError('');
+
+    try {
+      await api.delete(`/api/students/${id}`);
+      navigate('/students');
+    } catch (err) {
+      console.error('Error deleting student:', err);
+      const apiError = err?.response?.data?.error;
+      setError(apiError || 'Failed to delete student.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) return <div className="p-8 text-center font-bold text-indigo-900">Loading Profile...</div>;
   if (!student) return <div className="p-8 text-center text-red-500">Student not found.</div>;
 
@@ -115,31 +143,42 @@ const StudentProfile = () => {
             <span>Students</span> / <span className="text-[#3F3D8F]">Student Profile</span>
           </nav>
 
-          {isEditing ? (
-            <div className="flex gap-2">
-              <button
-                onClick={handleCancel}
-                disabled={saving}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-all"
-              >
-                <X size={16} /> Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="bg-[#10B981] hover:bg-[#059669] text-white px-5 py-2 rounded-lg font-bold flex items-center gap-2 transition-all shadow-sm disabled:opacity-70"
-              >
-                <Save size={16} /> {saving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          ) : (
+          <div className="flex gap-2">
             <button
-              onClick={() => setIsEditing(true)}
-              className="bg-[#FFB800] hover:bg-[#E6A600] text-[#1D1D47] px-6 py-2 rounded-lg font-bold flex items-center gap-2 transition-all shadow-sm"
+              onClick={handleDelete}
+              disabled={saving || deleting}
+              className="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-all disabled:opacity-70"
             >
-              <Edit3 size={16} /> Edit Profile
+              <Trash2 size={16} /> {deleting ? 'Deleting...' : 'Delete Student'}
             </button>
-          )}
+
+            {isEditing ? (
+              <>
+                <button
+                  onClick={handleCancel}
+                  disabled={saving || deleting}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-all"
+                >
+                  <X size={16} /> Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || deleting}
+                  className="bg-[#10B981] hover:bg-[#059669] text-white px-5 py-2 rounded-lg font-bold flex items-center gap-2 transition-all shadow-sm disabled:opacity-70"
+                >
+                  <Save size={16} /> {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setIsEditing(true)}
+                disabled={deleting}
+                className="bg-[#FFB800] hover:bg-[#E6A600] text-[#1D1D47] px-6 py-2 rounded-lg font-bold flex items-center gap-2 transition-all shadow-sm disabled:opacity-70"
+              >
+                <Edit3 size={16} /> Edit Profile
+              </button>
+            )}
+          </div>
         </div>
 
         {error && (

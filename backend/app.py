@@ -681,6 +681,51 @@ def update_student_profile(student_id):
 
         return jsonify({"error": str(e)}), 400
 
+
+@app.route('/api/students/<string:student_id>', methods=['DELETE'])
+def delete_student(student_id):
+    student = Student.query.filter_by(student_id=student_id).first()
+    if not student:
+        create_audit_log(
+            action="Delete Student",
+            action_type="DELETE",
+            description=f"Attempted to delete missing student {student_id}",
+            entity_type="Student",
+            entity_id=student_id,
+            status="FAILED",
+        )
+        db.session.commit()
+        return jsonify({"error": "Student not found"}), 404
+
+    student_name = f"{student.first_name} {student.last_name}".strip()
+
+    try:
+        db.session.delete(student)
+        create_audit_log(
+            action="Delete Student",
+            action_type="DELETE",
+            description=f"Deleted student {student_name} ({student.student_id})",
+            entity_type="Student",
+            entity_id=student.student_id,
+        )
+        db.session.commit()
+        return jsonify({"message": "Student deleted"}), 200
+    except Exception as e:
+        db.session.rollback()
+        try:
+            create_audit_log(
+                action="Delete Student",
+                action_type="DELETE",
+                description=f"Failed to delete student {student_id}: {str(e)}",
+                entity_type="Student",
+                entity_id=student_id,
+                status="FAILED",
+            )
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+
 @app.route('/api/intakes', methods=['GET'])
 def get_intakes():
     intakes = Intake.query.order_by(Intake.start_date.desc()).all()
